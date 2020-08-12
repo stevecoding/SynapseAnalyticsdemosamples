@@ -1,0 +1,45 @@
+{
+    "name": "Mapping",
+    "properties": {
+        "type": "MappingDataFlow",
+        "typeProperties": {
+            "sources": [
+                {
+                    "dataset": {
+                        "referenceName": "CustomerData",
+                        "type": "DatasetReference"
+                    },
+                    "name": "CustomerData"
+                },
+                {
+                    "dataset": {
+                        "referenceName": "TransactionData",
+                        "type": "DatasetReference"
+                    },
+                    "name": "TransactionData"
+                }
+            ],
+            "sinks": [
+                {
+                    "dataset": {
+                        "referenceName": "output_AggregatedSales",
+                        "type": "DatasetReference"
+                    },
+                    "name": "SaveToSynapse"
+                }
+            ],
+            "transformations": [
+                {
+                    "name": "RemoveColumns"
+                },
+                {
+                    "name": "JoinTransactions"
+                },
+                {
+                    "name": "AggregateSales"
+                }
+            ],
+            "script": "source(output(\n\t\tACCOUNT_NUMBER as long,\n\t\tGENDER as string,\n\t\tAGE as long,\n\t\tREGION_CODE as string,\n\t\tREWARDS_CLUB as string,\n\t\tMAILABLE as string,\n\t\tEMAILABLE as string,\n\t\tONLINE_SHOPPER as string,\n\t\tAPP_DOWNLOADED as string,\n\t\tAPP_OFFER_USER as string,\n\t\tTENURE as long\n\t),\n\tallowSchemaDrift: true,\n\tvalidateSchema: false,\n\tformat: 'parquet') ~> CustomerData\nsource(output(\n\t\tTRANSACTION_ID as string,\n\t\tTRANSACTION_DATE as string,\n\t\tACCOUNT_NUMBER as string,\n\t\tQUANTITY as string,\n\t\tPRODUCT_CODE as string,\n\t\tPRODUCT_CATEGORY as string,\n\t\tPRODUCT_NAME as string,\n\t\tPRODUCT_PRICE as string,\n\t\tLINE_TOTAL as string,\n\t\tPAYMENT_TYPE as string,\n\t\tCARD_NUMBER as string,\n\t\tUSED_COUPON as string,\n\t\tUSED_GIFT_CARD as string,\n\t\tCOUPON_CODE as string,\n\t\tSALES_PERSON as string,\n\t\tSTORE_ID as string\n\t),\n\tallowSchemaDrift: true,\n\tvalidateSchema: false) ~> TransactionData\nCustomerData select(mapColumn(\n\t\tACCOUNT_NUMBER,\n\t\tREGION_CODE\n\t),\n\tskipDuplicateMapInputs: true,\n\tskipDuplicateMapOutputs: true) ~> RemoveColumns\nRemoveColumns, TransactionData join(toString(RemoveColumns@ACCOUNT_NUMBER) == TransactionData@ACCOUNT_NUMBER,\n\tjoinType:'inner',\n\tbroadcast: 'auto')~> JoinTransactions\nJoinTransactions aggregate(groupBy(ACCOUNT_NUMBER = RemoveColumns@ACCOUNT_NUMBER,\n\t\tTRANSACTION_ID),\n\tSalesTotal = sum(toFloat(LINE_TOTAL))) ~> AggregateSales\nAggregateSales sink(allowSchemaDrift: true,\n\tvalidateSchema: false,\n\tdeletable:false,\n\tinsertable:true,\n\tupdateable:false,\n\tupsertable:false,\n\trecreate:true,\n\tformat: 'table',\n\tstaged: false,\n\tskipDuplicateMapInputs: true,\n\tskipDuplicateMapOutputs: true) ~> SaveToSynapse"
+        }
+    }
+}

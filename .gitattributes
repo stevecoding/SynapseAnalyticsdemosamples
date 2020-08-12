@@ -1,0 +1,7 @@
+*.parquet filter=lfs diff=lfs merge=lfs -text
+data/aggregates.parquet filter=lfs diff=lfs merge=lfs -text
+data/analytics.parquet filter=lfs diff=lfs merge=lfs -text
+data/customer.parquet filter=lfs diff=lfs merge=lfs -text
+data/transactions.csv filter=lfs diff=lfs merge=lfs -text
+data/analytics.json filter=lfs diff=lfs merge=lfs -text
+data/inventory.json filter=lfs diff=lfs merge=lfs -text
